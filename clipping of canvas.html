@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+  <html xmlns="http://www.w3.org/1999/xhtml"> 
+  
+<head> 
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+  
+<!-- External CSS Document(s) -->
+
+  
+<title>Online Drawing Application | Web Design Deluxe</title> 
+  
+<!-- Eternal JavaScript Document(s) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <script type="text/javascript" src="fabric.js"></script> 
+  
+  
+  
+</head> 
+
+<script>
+
+$(function() {
+
+var dpi_x = document.getElementById('testdiv').offsetWidth;
+var dpi_y = document.getElementById('testdiv').offsetHeight;
+var group;
+
+alert("dpi_x: "+dpi_x+", dpi_y:"+dpi_y);
+var canvas = new fabric.Canvas('c', { selection: false });
+var totalObjects = 0;
+var resizedCanvas = new fabric.Canvas('c1',{selection:false});
+
+
+var canvas2 = document.getElementById("canvasBottom");
+var ctx2 = canvas2.getContext("2d");
+$zoomIndex = 10;
+ctx2.beginPath();
+for (var i = 0.0; i < canvas.width; i += $zoomIndex) {
+    var y = (i / 100 == parseInt(i / 100)) ? 0 : 10;
+    ctx2.moveTo(i + 15, y);
+    ctx2.lineTo(i + 15, 15);
+    var x = (i / 100 == parseInt(i / 100)) ? 0 : 10;
+    ctx2.moveTo(x, i + 15);
+     ctx2.lineTo(15, i + 15);
+    
+}
+ctx2.stroke();
+
+
+canvas.on('object:modified',function(options,events){
+
+	console.log(options.target);
+
+});
+
+
+$("#lineButton").click(function(e)
+{
+
+	console.log("In the line button");
+	$lineCreate = true;
+	$circleCreate = false;
+	console.log("The value of choose line button is " + $lineCreate);
+
+});
+
+$("#circleButton").click(function(e)
+{
+
+	console.log("In the Circle button");
+	$circleCreate = true;
+	$lineCreate=false;
+	console.log("The value of choose circle button for line create is " + $lineCreate);
+
+});
+/////////////////////////////////////////////////////////////////////////////
+//////////////////////// clipping task////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+$("#finishButton").click(function(e)
+{
+
+	console.log("In the Finish button");
+	console.log(canvas.getObjects());
+	
+	var objects = []
+	for(var i=0;i<canvas.getObjects().length; i++)
+	{
+		objects.push(canvas.item(i));
+		canvas.remove(canvas.item(i));
+		i--;
+	}
+	group = new fabric.Group(objects);
+	
+	console.log(group.oCoords.tl);
+	var translateX = 0 - group.oCoords.tl.x + 20;
+	var translateY = 0 - group.oCoords.tl.y + 20;
+	
+	canvas.clear().renderAll();
+	
+	canvas.add(group);
+	
+	group.set({"left": 20, "top": 20});
+	
+	group.setCoords();
+	
+	
+	console.log(group.transformMatrix);
+	canvas.renderAll();
+	
+	
+	
+
+});
+
+$("#ungroupButton").click(function(e)
+{
+	group._restoreObjectsState();
+	
+	var lowerPoint = group.oCoords.br;
+	console.log(lowerPoint);
+	
+	canvas.clear().renderAll();
+	
+	canvas.setHeight(lowerPoint.y+20);
+	canvas.setWidth(lowerPoint.x+20);
+	console.log(group);
+	for (var i=0; i<group._objects.length;i++)
+	{
+		
+		canvas.add(group._objects[i]);
+		canvas.item(i).setCoords();
+		
+		
+	}
+	
+	canvas.renderAll();
+});
+
+/////////////////////////////////////////////////////////////////////////////
+//////////////////////// clipping task////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+
+canvas.on("object:selected", function (options, event) {
+        var object = options.target; //This is the object selected 
+		$objectSelected = object;
+		if(options.target.type === 'line')
+		{
+			console.log("Line is selected");
+			console.log(options.target);
+			
+			var text = new fabric.Text('new aisle', { left: options.target.left, top: options.target.top});
+			canvas.add(text);
+			console.log(text);
+		}
+       // var scope = angular.element(document.getElementById('c')).scope();
+        // You can do anything you want and then call...
+       // scope.$apply();
+   });
+
+$lineCreate = false;
+$circleCreate = false;
+
+var line, isDown;
+$(document).keyup(function(e) {
+     if (e.keyCode == 27) { // escape key maps to keycode `27`
+        $lineCreate = false;
+		$circleCreate = false;
+		canvas.selection = true;
+		console.log(canvas.selection);
+		console.log(canvas.toSVG());
+		var svg = canvas.toSVG();
+		
+		svg = svg.replace('width="9000" height="9000" xml:space="preserve"', 
+'width="188" height="264" viewBox="0 0 9000 9000" xml:space="preserve"');
+		resizedCanvas.clear();
+		fabric.loadSVGFromString(svg, function(objects, options) {
+  var obj = fabric.util.groupSVGElements(objects, options);
+  resizedCanvas.add(obj).renderAll();
+});
+
+		console.log("This is changed svg");
+		console.log(svg);
+    }
+		if(e.keyCode == 46)
+	{
+		console.log($objectSelected);
+		canvas.remove($objectSelected);
+		if ($objectSelected._objects.length > -1){
+			$objectSelected._objects.forEach(function(object){
+			
+				canvas.remove(object);
+			}
+			);
+		}
+		
+			
+		
+	}
+	console.log(e.keyCode);
+});
+
+$objectSelected = '';
+
+canvas.on('mouse:down', function(o){
+if($lineCreate)
+{
+	canvas.selection = false;
+	canvas.deactivateAll();
+	canvas.renderAll();
+	
+	console.log(canvas.selection);
+  isDown = true;
+  var pointer = canvas.getPointer(o.e);
+  var points = [ pointer.x, pointer.y, pointer.x, pointer.y ];
+  line = new fabric.Line(points, {
+    strokeWidth: 5,
+    fill: 'red',
+    stroke: 'red',
+    originX: 'center',
+    originY: 'center'
+  });
+  canvas.add(line);
+ }
+ else if ($circleCreate)
+ {
+	canvas.selection = false;
+	canvas.deactivateAll();
+	canvas.renderAll();
+	
+	isDown = true;
+  var pointer = canvas.getPointer(o.e);
+  origX = pointer.x;
+  origY = pointer.y;
+  circle = new fabric.Circle({
+    left: pointer.x,
+    top: pointer.y,
+    radius: 1,
+    strokeWidth: 5,
+    stroke: 'red',
+    
+    originX: 'center', originY: 'center'
+  });
+  canvas.add(circle);
+ 
+ 
+ }
+ 
+});
+
+canvas.on('mouse:move', function(o){
+  if (!isDown) return;
+  if ($lineCreate)
+  {
+  var pointer = canvas.getPointer(o.e);
+  line.set({ x2: pointer.x, y2: pointer.y });
+  }
+	else if($circleCreate)
+	{
+		 var pointer = canvas.getPointer(o.e);
+	circle.set({ radius: Math.abs(origX - pointer.x) });
+	}
+	canvas.renderAll();
+	return;
+  });
+
+canvas.on('mouse:up', function(o){
+  isDown = false;
+  var objects = canvas.getObjects().length;
+  
+  if (objects == totalObjects+1)
+  {
+	console.log("new object created");
+	var target = canvas.getObjects();
+	console.log(target[objects-1].type);
+	if(target[objects-1].type === 'line')
+	{
+		target[objects-1].isActive = true;
+		target[objects-1].isSelected = true;
+		
+		canvas.setActiveObject(target[objects-1]);
+		
+	}
+	totalObjects = objects;
+	
+  }
+  
+  
+});
+
+});
+</script>
+
+<style>
+
+#wrapper {
+    position:relative;
+    width:900px;
+    height:900px;
+	overflow: scroll;
+    
+}
+#canvasBottom {
+    position:absolute;
+    top:0px;
+    left:0px;
+    border:1px solid red;
+    
+}
+
+#c{
+border: 3px dotted blue;
+position:relative;
+}
+
+#c1{
+overflow:scroll;
+}
+
+#zoomButtons
+{
+	position:absolute;
+	bottom:100px;
+	right:100px;
+}
+</style>
+<body>
+<div id='testdiv' style='height: 1in; left: -100%; position: absolute; top: -100%; width: 1in;'></div>
+<div style="float:right; margin-right:20%;">
+	<h2>Scaled Down SVG</h2>
+	<canvas id="c1" width="188" height="264" style="border:1px solid black"></canvas>
+	</div>
+	<div id="wrapper">
+		<canvas id="canvasBottom" width="800" height="800" style="border:1px solid #ccc"></canvas>
+		<canvas id="c" width="9000" height="9000" style="border:1px solid #ccc">		</canvas>
+		<div id="zoomButtons">
+			<button type="button" id="zoomIn" value="zoom In">Testing</button>
+			<button type="button" id="zoomOut" value="zoom Out">Testing</button>
+		</div>
+	
+	
+	</div>
+	
+	<button type=""button" id="lineButton" value="Choose Line"> 
+Choose Line 
+</button>
+<button type=""button" id="circleButton" value="Choose Circle"> 
+Choose Circle 
+</button>
+
+<button type=""button" id="finishButton" value="Finish Drawing"> 
+Finish Drawing
+</button>
+
+<button type=""button" id="ungroupButton" value="Ungroup Objects"> 
+Ungroup Objects
+</button>
+
+	</body>
+
+</html>
